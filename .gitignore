@@ -1,0 +1,48 @@
+# Frontend
+node_modules/
+frontend-*/dist/
+frontend-*/coverage/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+.coverage
+htmlcov/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Database and uploaded documents
+*.db
+*.db-shm
+*.db-wal
+backend/data/*
+!backend/data/.gitkeep
+!backend/data/uploads/
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
+
+# Confidential source files
+docs/private/
+
+# Logs
+*.log
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local AI-assistant state (machine-specific permissions and worktrees)
+.claude/settings.local.json
+.claude/worktrees/

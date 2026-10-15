@@ -41,13 +41,13 @@ export function RiskFlagList({ flags }: RiskFlagListProps) {
             aria-hidden="true"
           />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium text-slate-900">
+            <div className="flex items-start justify-between gap-2">
+              <p className="min-w-0 break-words text-sm font-medium text-slate-900">
                 {humanise(flag.flag)}
               </p>
               <span
                 className={cn(
-                  'rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide',
+                  'shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide',
                   SEVERITY_LABEL_CLASS[flag.severity]
                 )}
               >

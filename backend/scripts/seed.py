@@ -427,13 +427,14 @@ class DemoSeeder:
                 Analysis(
                     lead=priya,
                     coverage_gaps=[
-                        {"area": "sum_insured_adequacy", "description": "₹5L floater is thin for a Bengaluru family of 4. One critical-illness hospitalization can exhaust the cover.", "severity": "high"},
-                        {"area": "maternity_cover", "description": "Current product excludes maternity. Not a current need but noted for lifecycle.", "severity": "low"},
-                        {"area": "critical_illness_rider", "description": "No critical-illness rider captured on the health policy.", "severity": "medium"},
+                        {"area": "sum_insured_adequacy", "description": "₹5L floater is thin for a Bengaluru family of 4. One critical-illness hospitalization can exhaust the cover.", "severity": "high", "basis": "confirmed_in_document"},
+                        {"area": "maternity_cover", "description": "The policy's exclusions list maternity. Not a current need but noted for lifecycle.", "severity": "low", "basis": "confirmed_in_document"},
+                        {"area": "critical_illness_rider", "description": "No critical-illness rider captured in the document. Confirm with Priya; if absent, it's a material gap for a sole earner.", "severity": "medium", "basis": "not_captured"},
                     ],
                     potential_savings={
-                        "annual_inr": 9600,
-                        "rationale": "A ₹15L floater from a comparable insurer would price around ₹25–28K/yr, within the stated 30k budget; dropping the hospital-cash rider (duplicative with higher sum insured) saves ~₹9,600 annually.",
+                        "annual_inr": 0,
+                        "rationale": "Upgrading the cover will raise the premium, not lower it. Get comparison quotes for a ₹15–20L floater against the ₹30k budget before discussing a number.",
+                        "basis": "not_quantified",
                     },
                     risk_flags=[
                         {"flag": "under_insured_floater", "description": "Floater of ₹5L spread across 4 lives is below typical Bengaluru hospitalization costs for cardiac events (~₹7–10L).", "severity": "high"},

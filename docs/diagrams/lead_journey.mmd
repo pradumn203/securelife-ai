@@ -12,8 +12,8 @@ flowchart TD
 
   G --> H["Policy PDF uploaded<br/>by prospect or broker"]
   H --> I["DOCUMENTS PENDING REVIEW"]
-  I --> J["Broker: Run extractor agent<br/>policy fields + evidence"]
-  J --> K["Broker: Run analysis agent<br/>gaps, savings, risks, next action"]
+  I --> J["Broker: Run extractor agent<br/>policy fields, citations checked against the PDF"]
+  J --> K["Broker: Run analysis agent<br/>uses verified facts only"]
   K --> L["COMPLETED ANALYSES"]
   L --> M["Broker closes the lead<br/>Purchased / Other + note"]
 

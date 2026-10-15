@@ -53,6 +53,11 @@ class FieldEvidence(BaseModel):
         description="A short verbatim excerpt proving the value.",
     )
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    # Set by `ExtractionEvidenceChecker`, never by the model: True when the
+    # excerpt was found in the PDF text (and supports the value), False when
+    # it wasn't, None when there is no value to check.
+    verified: bool | None = None
+    verification_note: str | None = None
 
     @field_validator("value", mode="before")
     @classmethod
@@ -84,6 +89,7 @@ class ExclusionItem(BaseModel):
     model_config = ConfigDict(extra="allow")
     text: str
     source_page: int | None = Field(default=None, ge=1)
+    verified: bool | None = None
 
     @field_validator("source_page", mode="before")
     @classmethod
@@ -96,6 +102,7 @@ class RiderItem(BaseModel):
     name: str
     description: str | None = None
     source_page: int | None = Field(default=None, ge=1)
+    verified: bool | None = None
 
     @field_validator("source_page", mode="before")
     @classmethod

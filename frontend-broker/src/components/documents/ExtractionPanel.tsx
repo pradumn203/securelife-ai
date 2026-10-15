@@ -79,11 +79,13 @@ export function ExtractionPanel({ extraction }: ExtractionPanelProps) {
   const exclusions = (extraction.exclusions ?? []) as Array<{
     text?: string
     source_page?: number | null
+    verified?: boolean | null
   }>
   const riders = (extraction.riders ?? []) as Array<{
     name?: string
     description?: string | null
     source_page?: number | null
+    verified?: boolean | null
   }>
   return (
     <div className="space-y-5">
@@ -140,6 +142,7 @@ export function ExtractionPanel({ extraction }: ExtractionPanelProps) {
                         p.{ex.source_page}
                       </span>
                     ) : null}
+                    {ex.verified === false ? <NotFoundTag /> : null}
                   </span>
                 </li>
               ))}
@@ -162,9 +165,12 @@ export function ExtractionPanel({ extraction }: ExtractionPanelProps) {
                     <span className="font-medium text-slate-900">
                       {r.name ?? 'Rider'}
                     </span>
-                    {typeof r.source_page === 'number' ? (
-                      <span className="text-xs text-slate-400">p.{r.source_page}</span>
-                    ) : null}
+                    <span className="flex items-center gap-2">
+                      {r.verified === false ? <NotFoundTag /> : null}
+                      {typeof r.source_page === 'number' ? (
+                        <span className="text-xs text-slate-400">p.{r.source_page}</span>
+                      ) : null}
+                    </span>
                   </div>
                   {r.description ? (
                     <p className="mt-1 text-sm text-slate-600">{r.description}</p>
@@ -176,5 +182,17 @@ export function ExtractionPanel({ extraction }: ExtractionPanelProps) {
         </>
       ) : null}
     </div>
+  )
+}
+
+/** Marks a paraphrased exclusion / rider whose wording isn't on any page. */
+function NotFoundTag() {
+  return (
+    <span
+      className="ml-2 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-800"
+      title="Not found in the document. The analysis agent ignores it; confirm before relying on it."
+    >
+      not found in document
+    </span>
   )
 }

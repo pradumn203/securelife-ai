@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+GapBasis = Literal["confirmed_in_document", "not_captured", "client_profile"]
+SavingsBasis = Literal["verified_premium", "not_quantified"]
 
 
 class CoverageGap(BaseModel):
@@ -12,12 +15,25 @@ class CoverageGap(BaseModel):
     area: str = Field(description="e.g. 'critical illness', 'personal accident'")
     description: str
     severity: Literal["low", "medium", "high"] = "medium"
+    # Where the gap comes from. "not_captured" means the extraction doesn't
+    # mention it — the policy may still have it — so the broker confirms it
+    # with the client rather than calling it absent.
+    basis: GapBasis = "not_captured"
+
+    @field_validator("basis", mode="before")
+    @classmethod
+    def _unknown_basis_is_not_captured(cls, v: Any) -> Any:
+        allowed = ("confirmed_in_document", "not_captured", "client_profile")
+        return v if v in allowed else "not_captured"
 
 
 class PotentialSavings(BaseModel):
     model_config = ConfigDict(extra="allow")
     annual_inr: int = Field(default=0, ge=0)
     rationale: str = ""
+    # Set by `AnalysisGrounding`, never by the model: a non-zero figure is only
+    # kept when a verified premium in the documents can support it.
+    basis: SavingsBasis = "not_quantified"
 
 
 class RiskFlag(BaseModel):

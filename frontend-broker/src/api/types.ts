@@ -378,6 +378,12 @@ export interface components {
              * @enum {string}
              */
             severity: "low" | "medium" | "high";
+            /**
+             * Basis
+             * @default not_captured
+             * @enum {string}
+             */
+            basis: "confirmed_in_document" | "not_captured" | "client_profile";
         } & {
             [key: string]: unknown;
         };
@@ -550,6 +556,10 @@ export interface components {
              * @default 0
              */
             confidence: number;
+            /** Verified */
+            verified?: boolean | null;
+            /** Verification Note */
+            verification_note?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -900,6 +910,12 @@ export interface components {
              * @default
              */
             rationale: string;
+            /**
+             * Basis
+             * @default not_quantified
+             * @enum {string}
+             */
+            basis: "verified_premium" | "not_quantified";
         } & {
             [key: string]: unknown;
         };

@@ -223,10 +223,15 @@ class Smoke:
                 break
             await asyncio.sleep(1.5)
         happy = last_status == "EXTRACTED"
+        flags = [
+            ev.get("verified")
+            for ev in ((doc.get("extraction") or {}).get("evidence") or {}).values()
+            if ev.get("verified") is not None
+        ]
         self._record(
             "documents.poll",
             happy or not self._strict,
-            f"final_status={last_status}",
+            f"final_status={last_status} citations_verified={sum(flags)}/{len(flags)}",
         )
         return doc_id
 
@@ -253,7 +258,8 @@ class Smoke:
             True,
             f"gaps={len(analysis.get('coverage_gaps', []))} "
             f"risks={len(analysis.get('risk_flags', []))} "
-            f"conf={analysis.get('confidence')}",
+            f"conf={analysis.get('confidence')} "
+            f"savings={(analysis.get('potential_savings') or {}).get('basis')}",
         )
 
     # --- 7. lead detail ----------------------------------------------

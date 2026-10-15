@@ -9,7 +9,7 @@ import { ConversationThread } from '@/components/leads/ConversationThread'
 import { LeadDetailLayout } from '@/components/leads/LeadDetailLayout'
 import { LeadHeader } from '@/components/leads/LeadHeader'
 import { QualificationPanel } from '@/components/leads/QualificationPanel'
-import { analysisBlockedReason } from '@/components/leads/pipelineGuide'
+import { analysisBlockedReason, analysisCaution } from '@/components/leads/pipelineGuide'
 
 function Breadcrumb() {
   return (
@@ -91,6 +91,7 @@ export function LeadDetailPage() {
           leadId={leadId}
           latestAnalysis={latestAnalysis}
           blockedReason={analysisBlockedReason(lead)}
+          caution={analysisCaution(lead)}
         />
       }
     />

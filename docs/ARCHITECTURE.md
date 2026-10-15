@@ -34,8 +34,8 @@ Data lives in a single SQLite file, and uploaded PDFs sit on local disk next to 
 2. Each message goes to the **chat agent**, which streams a reply. As soon as the reply finishes, a background job runs the **chat extractor agent** over that turn and records any facts the prospect gave (name, contact, insurance type, vehicle, and so on).
 3. Once the lead has a name and an email or phone number, it appears under **New leads** on the broker dashboard. Before that it is invisible, because a lead with no way to contact them is not actionable.
 4. The broker clicks **Run qualification agent**. It reads the whole conversation and returns a verdict with evidence. The lead moves to **In progress**.
-5. A policy document arrives, either from the prospect in the chat or uploaded by the broker. A qualified lead moves to **Documents pending review**.
-6. The broker runs the **document extractor agent** on each PDF and then the **analysis agent**, which produces coverage gaps, savings, risk flags and a recommended action. The lead moves to **Completed analyses**.
+5. A policy document arrives, either from the prospect in the chat or uploaded by the broker. The lead moves to **Documents pending review**, unless the verdict was "not qualified", in which case it waits in In progress for the broker to close it.
+6. The broker runs the **document extractor agent** on each PDF. Every value it cites is checked against the PDF's own text before it is stored. Then the broker runs the **analysis agent**, which produces coverage gaps, savings, risk flags and a recommended action from the verified facts. The lead moves to **Completed analyses**.
 7. The broker closes the lead with a reason: purchased, disqualified or other, plus a note.
 
 The broker triggers every step after the chat on purpose. It keeps token spend under the broker's control, and no lead ever lands in a stage the broker didn't choose.
@@ -81,15 +81,15 @@ I used JSON columns wherever the shape comes from a model and is still evolving:
 | Stage | Dashboard tab | A lead is here when |
 |---|---|---|
 | NEW | New leads | The prospect has shared a name and contact, and nobody has run qualification yet |
-| IN_PROGRESS | In progress | The broker has run the qualification agent, whatever the verdict |
-| DOCS_PENDING | Documents pending review | The lead is qualified and has at least one document |
+| IN_PROGRESS | In progress | The broker has run the qualification agent. A "not qualified" lead stays here even if documents arrive |
+| DOCS_PENDING | Documents pending review | The verdict is "qualified" or "needs more info", and the lead has at least one document |
 | ANALYZED | Completed analyses | The analysis agent has run |
 | CLOSED | Closed | The broker closed it, with a reason and a note |
 
 All automatic moves live in one small class, `PipelineRules`, which the routes call at each event: qualification, upload, document deletion and analysis. A few rules worth calling out:
 
 - **Documents don't skip qualification.** A new lead that uploads a policy stays new until it is qualified, then goes straight to Documents pending review.
-- **Analysis needs a qualified lead.** The server refuses it on a new or closed lead, and the UI disables the button and explains why.
+- **Analysis needs the verdict, not just the stage.** The server refuses it until qualification has run, and refuses it outright for a "not qualified" lead, so no advice is ever written for a prospect the broker shouldn't pursue. "Needs more info" is allowed, with a caution shown above the analysis. The UI disables the button and explains why.
 - **A new document re-opens review.** Uploading to an analysed lead moves it back to Documents pending review.
 - **The verdict never closes a lead.** Closing is always the broker's decision. A "not qualified" verdict offers a one-click "Close as disqualified" that pre-fills the note with the agent's summary.
 
@@ -118,7 +118,8 @@ Everything else runs locally in ordinary code, and that is most of the system:
 - **PDF handling:** validating PDFs and extracting their text.
 - **The question plan:** deciding which questions the chat should ask.
 - **Contact details:** reading email addresses and Indian phone numbers out of messages with regular expressions.
-- **Evidence checks:** verifying that every quote a model gives really appears in the source.
+- **Evidence checks:** verifying that every quote a model gives really appears in the source: the prospect's words for qualification, the PDF's text for extraction.
+- **Advice limits:** dropping any savings figure the documents can't support.
 - **Scores and verdicts:** computing scores and finalising verdicts.
 - **The pipeline:** every stage transition.
 
@@ -150,6 +151,20 @@ The qualification agent gets the most checking, because it influences who a brok
 2. **The overall score is computed by code** from the dimension scores, never taken from the model.
 3. **The verdict is corrected where needed.** "Qualified" is downgraded to "needs more info" if the score is under 70 or plan facts are missing.
 4. **Dealbreakers force a "not qualified".** The agent also lists dealbreakers, each with a quote: expecting guaranteed returns, refusing to pay any premium, or just browsing. Any verified dealbreaker forces the verdict to "not qualified". I added this after watching the model list exactly those red flags for a prospect wanting "an insurance plan that doubles my money in 2 years, guaranteed", and still answer "needs more info". The model only has to spot the problem; the code makes the call.
+
+The document extractor gets the same treatment, because a correctly shaped citation can still be invented. `ExtractionEvidenceChecker` runs on every extraction before it is stored, using the page texts the model was shown:
+
+1. **The excerpt must be in the document.** Matching ignores case, spacing, punctuation and line-break hyphens, since PDF text layers reflow freely, but never letters or digits. An excerpt shortened with "..." matches when its pieces appear in order on one page.
+2. **The page must be right.** A citation to the wrong page, or to a page that doesn't exist, is corrected when the excerpt is found elsewhere.
+3. **The excerpt must support the value.** For amounts, dates and policy numbers, the excerpt has to contain that value, so `sum_insured = 2500000` needs "25,00,000" or "25 lakh" in it, not just any real sentence from the policy.
+4. **Exclusions and riders** are paraphrased by design, so they are checked by word overlap with the page instead.
+
+A field that fails stays visible to the broker, marked "unverified" with the reason, and its confidence is capped at 0.3. The analysis agent is told to treat it as unknown, and unverified exclusions and riders are left out of its input. Checking costs no tokens, and an unverified field is a prompt for the broker to look, not a reason to discard the extraction.
+
+The analysis agent writes advice about money, so its output gets two checks of its own (`AnalysisGrounding`):
+
+- **Savings need a verified premium.** SecureLife has no market-quote data, so the only defensible saving is one carved out of what the client already pays. A figure is kept only when a document carries a verified premium and the figure is smaller than that premium. Otherwise the broker sees "Not quantified" and what they'd need to get a number, usually comparison quotes.
+- **"Not captured" is not "absent".** Every coverage gap says what it rests on: confirmed in the document, not captured (the extraction doesn't mention it, so the broker confirms with the client), or from the client's own answers in the chat. A gap can't claim document backing when no document fact was verified. The analysis input itself says "none captured (not confirmed absent)" rather than "none".
 
 ### Fallback logic
 
@@ -189,12 +204,14 @@ Every error that could reach a user goes through one function, `user_safe_messag
 - **Invented qualification evidence** is caught by quote verification, and that dimension is capped.
 - **Over-generous verdicts** are corrected by the server-side score and threshold.
 - **Hedging on obvious bad fits** is overridden by verified dealbreakers.
-- **Hallucinated policy details** are held back by nullable fields, the "never guess" rule and the per-field evidence the broker can hover to see.
+- **Hallucinated policy details** are held back by nullable fields and the "never guess" rule, and caught by the evidence checker: an excerpt that isn't in the PDF, or doesn't contain the value, marks the field unverified and keeps it out of the analysis.
+- **Invented savings** are dropped unless a verified premium supports them.
+- **Missing riders read as absent** is prevented by tagging each gap "not captured" unless a verified document fact backs it.
 
 ### Data consistency
 
 - **Stage logic lives in one place,** so the stage can't drift between screens.
-- **Out-of-order actions are refused.** Analysing before qualifying, or re-qualifying a closed lead, gets a server refusal with the reason, plus a disabled button and a "next step" hint in the UI.
+- **Out-of-order actions are refused.** Analysing before qualifying, analysing a "not qualified" lead, or re-qualifying a closed lead gets a server refusal with the reason, plus a disabled button and a "next step" hint in the UI.
 - **Closing requires a reason,** and re-opening a lead clears it.
 - **Uploads to a lead that doesn't exist** are refused before anything is written, and foreign keys are enforced on every database connection.
 - **Double clicks can't start a document extraction twice:** the status flips to processing before the job is scheduled.

@@ -102,7 +102,9 @@ per-item `source_page` on each list element is sufficient.
 
 2. **Never fabricate evidence.** The `source_excerpt` must be a real substring
    of the document. If you cannot find a snippet to justify a value, the value
-   should be `null`.
+   should be `null`. Every excerpt is checked against the page text after you
+   answer: one that isn't on the page, or doesn't contain the value you
+   extracted, gets the field flagged as unverified for the broker.
 
 3. **Do not infer across pages for scalar fields.** `renewal_date` on page 1
    and `sum_insured` on page 2 is fine, but do not synthesize a value from

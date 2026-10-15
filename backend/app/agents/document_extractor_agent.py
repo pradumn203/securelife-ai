@@ -8,12 +8,14 @@ Groq's chat models are text-only, so this agent orchestrates:
 3. Call `chat.completions.create` with `response_format={"type": "json_object"}`
    and a prompt that demands the exact `DocumentExtractionLLMSchema` shape.
 4. On a malformed response, do ONE retry with a stricter preamble.
-5. Return the parsed Pydantic instance and elapsed duration.
+5. Return the parsed Pydantic instance, the page texts the model saw (so
+   `ExtractionEvidenceChecker` can verify every citation against them) and
+   the elapsed duration.
 
 **Limitation.** Scanned (image-only) PDFs have no text layer. The ingestor
 upstream still accepts them, but extraction will see empty content for those
 pages and should return `null` + `confidence: 0.0` per our prompt rules. Full
-OCR is a production addition (see ARCHITECTURE.md §10).
+OCR is a production addition (see ARCHITECTURE.md, "What I would do next").
 
 The agent does not touch the DB. Persistence is the background task's job.
 """
@@ -36,12 +38,16 @@ log = logging.getLogger(__name__)
 
 
 class ExtractionResult:
-    """Parsed response + timing. Kept simple for the caller."""
+    """Parsed response, the page texts the model saw, and timing."""
 
-    __slots__ = ("parsed", "duration_ms")
+    __slots__ = ("parsed", "pages", "duration_ms")
 
-    def __init__(self, parsed: DocumentExtractionLLMSchema, duration_ms: int) -> None:
+    def __init__(
+        self, parsed: DocumentExtractionLLMSchema, pages: list[str], duration_ms: int
+    ) -> None:
         self.parsed = parsed
+        # pages[i] is page i + 1; "" for pages with no text or not sent.
+        self.pages = pages
         self.duration_ms = duration_ms
 
 
@@ -92,7 +98,7 @@ class DocumentExtractorAgent:
 
     async def extract(self, _doc: Document, local_path: Path) -> ExtractionResult:
         """Run one extraction. Caller handles DB persistence."""
-        document_text = self._extract_text(local_path)
+        document_text, pages = self._extract_text(local_path)
         system_prompt = self._prompts.get(self.PROMPT_NAME)
 
         started = time.monotonic()
@@ -116,34 +122,40 @@ class DocumentExtractorAgent:
                 "The assistant did not return a parseable extraction after one retry."
             )
 
-        return ExtractionResult(parsed=parsed, duration_ms=duration_ms)
+        return ExtractionResult(parsed=parsed, pages=pages, duration_ms=duration_ms)
 
     # ------------------------------------------------------------------
     # PDF text layer
     # ------------------------------------------------------------------
-    def _extract_text(self, local_path: Path) -> str:
+    def _extract_text(self, local_path: Path) -> tuple[str, list[str]]:
         """Pull per-page text with `--- Page N ---` markers.
 
         Pages with no text layer (scanned images) still get a marker so the
         model can report "not visible on page N" rather than silently
         mis-attributing citations.
+
+        Returns the prompt text and the raw text of each page the model was
+        actually shown (pages past the input cap are "").
         """
         parts: list[str] = []
+        pages: list[str] = []
         running_chars = 0
         with pymupdf.open(local_path) as doc:
             for idx in range(doc.page_count):
-                page = doc.load_page(idx)
-                raw = page.get_text("text").strip() or "[no extractable text on this page]"
+                text = doc.load_page(idx).get_text("text").strip()
+                raw = text or "[no extractable text on this page]"
                 block = f"--- Page {idx + 1} ---\n{raw}\n"
                 if running_chars + len(block) > self._max_input_chars:
                     parts.append(
                         f"--- Page {idx + 1} ---\n"
                         "[truncated: document exceeds context window; later pages omitted]\n"
                     )
+                    pages.extend([""] * (doc.page_count - idx))
                     break
                 parts.append(block)
+                pages.append(text)
                 running_chars += len(block)
-        return "".join(parts) if parts else "[document had no readable text]"
+        return ("".join(parts) if parts else "[document had no readable text]"), pages
 
     # ------------------------------------------------------------------
     # Model call

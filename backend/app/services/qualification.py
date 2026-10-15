@@ -272,7 +272,9 @@ class QualificationOrchestrator:
             has_documents = await DocumentRepository(session).count_for_lead(lead_id) > 0
             await leads.touch_status(
                 lead,
-                PipelineRules.after_qualification(lead.status, has_documents=has_documents),
+                PipelineRules.after_qualification(
+                    lead.status, has_documents=has_documents, verdict=final.verdict
+                ),
             )
             await session.commit()
             await session.refresh(row)

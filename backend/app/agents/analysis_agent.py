@@ -19,6 +19,7 @@ from openai import AsyncOpenAI
 from app.agents.client import ModelFallback
 from app.agents.prompts import PromptLibrary
 from app.schemas.analysis import AnalysisLLMOutput
+from app.services.analysis_grounding import EvidenceStatus
 from app.services.question_plan import QuestionPlan
 
 if TYPE_CHECKING:
@@ -146,39 +147,57 @@ class AnalysisAgent:
 
         lines.append("")
         lines.append("# Current policies")
+        lines.append(
+            "Facts were checked against the PDF text. A fact marked \"could not be verified\" "
+            "was not found in the document: treat it as unknown and never repeat that label. \"Not captured\" means "
+            "the extraction doesn't mention it, not that the policy lacks it."
+        )
         for idx, ext in enumerate(extractions, start=1):
             lines.append(f"## Policy {idx}")
-            lines.append(f"- Policy type: {ext.policy_type or 'unknown'}")
-            lines.append(f"- Provider: {ext.provider or 'unknown'}")
+            fact = self._fact_formatter(ext)
+            lines.append(f"- Policy type: {fact('policy_type', ext.policy_type)}")
+            lines.append(f"- Provider: {fact('provider', ext.provider)}")
             if ext.policy_number:
-                lines.append(f"- Policy number: {ext.policy_number}")
+                lines.append(f"- Policy number: {fact('policy_number', ext.policy_number)}")
             if ext.insured_name:
-                lines.append(f"- Insured name: {ext.insured_name}")
-            lines.append(f"- Sum insured: {self._fmt_amount(ext.sum_insured)}")
+                lines.append(f"- Insured name: {fact('insured_name', ext.insured_name)}")
+            lines.append(f"- Sum insured: {fact('sum_insured', self._fmt_amount(ext.sum_insured))}")
             if ext.premium_amount is not None or ext.premium_frequency:
                 freq = ext.premium_frequency or "unknown frequency"
-                lines.append(
-                    f"- Premium: {self._fmt_amount(ext.premium_amount)} ({freq})"
-                )
+                premium = fact("premium_amount", self._fmt_amount(ext.premium_amount))
+                lines.append(f"- Premium: {premium} ({freq})")
             if ext.renewal_date is not None:
-                lines.append(f"- Renewal date: {ext.renewal_date.isoformat()}")
-            exclusions = list(ext.exclusions or [])
-            if exclusions:
-                lines.append("- Exclusions:")
-                for item in exclusions:
-                    lines.append(f"  - {self._fmt_item(item)}")
-            else:
-                lines.append("- Exclusions: none captured")
-            riders = list(ext.riders or [])
-            if riders:
-                lines.append("- Riders:")
-                for item in riders:
-                    lines.append(f"  - {self._fmt_item(item)}")
-            else:
-                lines.append("- Riders: none captured")
+                lines.append(f"- Renewal date: {fact('renewal_date', ext.renewal_date.isoformat())}")
+            self._append_items(lines, "Exclusions", list(ext.exclusions or []))
+            self._append_items(lines, "Riders", list(ext.riders or []))
             lines.append("")
 
         return "\n".join(lines)
+
+    @staticmethod
+    def _fact_formatter(ext: DocumentExtraction) -> Callable[[str, Any], str]:
+        """Render a value, labelling the ones the evidence check rejected."""
+
+        def fmt(field: str, value: Any) -> str:
+            if value is None or value == "not captured":
+                return "not captured"
+            if EvidenceStatus.field(ext, field) is False:
+                return f"{value} (could not be verified against the document — treat as unknown)"
+            return str(value)
+
+        return fmt
+
+    def _append_items(self, lines: list[str], label: str, items: list[Any]) -> None:
+        """Exclusions / riders, leaving out the ones not found in the document."""
+        kept = [i for i in items if EvidenceStatus.item(i) is not False]
+        dropped = len(items) - len(kept)
+        if kept:
+            lines.append(f"- {label}:")
+            lines.extend(f"  - {self._fmt_item(item)}" for item in kept)
+        else:
+            lines.append(f"- {label}: none captured (not confirmed absent)")
+        if dropped:
+            lines.append(f"  ({dropped} more could not be found in the document and were left out)")
 
     @staticmethod
     def _fmt_amount(value: Decimal | float | int | None) -> str:

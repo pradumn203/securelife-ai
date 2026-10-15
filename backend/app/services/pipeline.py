@@ -4,10 +4,15 @@ Each stage is one dashboard tab:
 
     NEW            New leads: chatting, qualification agent not run yet
     IN_PROGRESS    In progress: qualification agent has run, no documents yet
+                   (or the verdict was Not qualified, so documents wait)
     DOCS_PENDING   Documents pending review: qualified and documents uploaded
     ANALYZED       Completed analyses: analysis agent has run
     CLOSED         Closed by the broker, with a reason (disqualified /
                    purchased / other) and a note
+
+A NOT_QUALIFIED verdict never closes a lead by itself (closing is the
+broker's call), but it does stop the lead advancing: its documents don't
+move it into review and the analysis agent won't run for it.
 
 Routers and orchestrators call these methods at each event instead of
 setting `status` themselves, so the lifecycle lives in one tested place.
@@ -23,6 +28,8 @@ QUALIFIABLE_STATUSES: frozenset[LeadStatus] = frozenset(
     {LeadStatus.NEW, LeadStatus.IN_PROGRESS, LeadStatus.DOCS_PENDING}
 )
 
+NOT_QUALIFIED = "NOT_QUALIFIED"
+
 
 class PipelineRules:
     """Stage transitions for a lead, one method per pipeline event."""
@@ -32,23 +39,31 @@ class PipelineRules:
         return status in QUALIFIABLE_STATUSES
 
     @staticmethod
-    def after_qualification(status: LeadStatus, *, has_documents: bool) -> LeadStatus:
-        """Qualification agent ran (any verdict) → the broker is now working the lead.
+    def after_qualification(
+        status: LeadStatus, *, has_documents: bool, verdict: str | None = None
+    ) -> LeadStatus:
+        """Qualification agent ran → the broker is now working the lead.
 
-        Documents the prospect shared before qualification go straight to review.
+        Documents the prospect shared before qualification go straight to
+        review, unless the verdict was Not qualified: that lead stays In
+        progress until the broker closes it or a re-run changes the verdict.
         """
         if not PipelineRules.can_qualify(status):
             return status
-        return LeadStatus.DOCS_PENDING if has_documents else LeadStatus.IN_PROGRESS
+        if has_documents and verdict != NOT_QUALIFIED:
+            return LeadStatus.DOCS_PENDING
+        return LeadStatus.IN_PROGRESS
 
     @staticmethod
-    def after_document_uploaded(status: LeadStatus) -> LeadStatus:
+    def after_document_uploaded(status: LeadStatus, *, verdict: str | None = None) -> LeadStatus:
         """A document arrived (from the prospect or the broker).
 
         Qualified leads move to review; a new document on an analysed lead
         re-opens review. NEW leads stay NEW until the broker qualifies them,
-        and CLOSED leads stay closed.
+        Not-qualified leads stay where they are, and CLOSED leads stay closed.
         """
+        if verdict == NOT_QUALIFIED:
+            return status
         if status in (LeadStatus.IN_PROGRESS, LeadStatus.ANALYZED):
             return LeadStatus.DOCS_PENDING
         return status
@@ -61,16 +76,22 @@ class PipelineRules:
         return status
 
     @staticmethod
-    def analysis_blocked_reason(status: LeadStatus) -> str | None:
-        """Why the analysis agent can't run at this stage, or None if it can.
+    def analysis_blocked_reason(status: LeadStatus, *, verdict: str | None = None) -> str | None:
+        """Why the analysis agent can't run for this lead, or None if it can.
 
-        Analysis comes after qualification so the stages stay in order:
-        New leads → In progress → Documents pending review → Completed analyses.
+        Analysis needs a qualification verdict that isn't Not qualified, so
+        advice is only ever produced for a prospect the broker can act on.
+        Needs more info is allowed: the broker sees the gaps alongside it.
         """
-        if status == LeadStatus.NEW:
-            return "Run the qualification agent before the analysis agent."
         if status == LeadStatus.CLOSED:
             return "This prospect is closed. Re-open it (Edit → Status) to run a new analysis."
+        if status == LeadStatus.NEW or verdict is None:
+            return "Run the qualification agent before the analysis agent."
+        if verdict == NOT_QUALIFIED:
+            return (
+                "The qualification agent marked this prospect Not qualified. Close them as "
+                "disqualified, or correct their details (Edit) and re-run qualification."
+            )
         return None
 
     @staticmethod

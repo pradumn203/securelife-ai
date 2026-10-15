@@ -17,6 +17,8 @@ export interface AnalysisPanelProps {
   latestAnalysis: AnalysisOut | null
   /** Why the analysis agent can't run yet (shown as a tooltip), or null if it can. */
   blockedReason: string | null
+  /** Shown above the analysis when it can run but should be read with care. */
+  caution?: string | null
 }
 
 /**
@@ -27,6 +29,7 @@ export function AnalysisPanel({
   leadId,
   latestAnalysis,
   blockedReason,
+  caution = null,
 }: AnalysisPanelProps) {
   const query = useLatestAnalysis(leadId)
   const mutation = useGenerateAnalysis(leadId)
@@ -76,6 +79,12 @@ export function AnalysisPanel({
         )}
       </CardHeader>
       <CardContent className="space-y-5">
+        {caution && !blockedReason ? (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {caution}
+          </p>
+        ) : null}
+
         {mutation.error ? (
           <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
             {mutation.error.message}

@@ -40,6 +40,7 @@ from app.db import get_db, session_dependency
 from app.repositories.documents import DocumentRepository
 from app.repositories.leads import LeadRepository
 from app.schemas.document import DocumentOut, DocumentUploadResponse
+from app.services.evidence_check import ExtractionEvidenceChecker
 from app.services.pdf_ingest import PdfIngestor, PdfValidationError
 from app.services.pipeline import PipelineRules
 from app.settings import Settings, get_settings
@@ -93,7 +94,9 @@ async def upload_document(
         page_count=stored.page_count,
     )
 
-    await leads.touch_status(lead, PipelineRules.after_document_uploaded(lead.status))
+    await leads.touch_status(
+        lead, PipelineRules.after_document_uploaded(lead.status, verdict=lead.qualification_verdict)
+    )
     await session.commit()
 
     # DELIBERATE: extraction is NOT auto-started. The broker triggers it from
@@ -227,18 +230,24 @@ async def extract_document_task(document_id: str) -> None:
         try:
             agent = _build_document_extractor_agent(settings)
             result = await agent.extract(doc, Path(doc.stored_path))
+            # The agent proposes citations; code checks each one against the
+            # PDF text before anything reaches the broker or the analysis agent.
+            checked = ExtractionEvidenceChecker(result.pages).check(result.parsed)
 
             await repo.persist_extraction(
                 doc,
-                result.parsed,
+                checked,
                 model_name=agent.model_name,
                 duration_ms=result.duration_ms,
             )
             await repo.update_status(doc, DocumentStatus.EXTRACTED)
+            verified, unverified = ExtractionEvidenceChecker.summary(checked)
             log.info(
-                "extract_document_task done doc=%s duration_ms=%d",
+                "extract_document_task done doc=%s duration_ms=%d verified=%d unverified=%d",
                 document_id,
                 result.duration_ms,
+                verified,
+                unverified,
             )
         except ExtractionFailed as exc:
             # Full exception (model, prompt, cause) in the server logs.

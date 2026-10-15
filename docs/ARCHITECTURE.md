@@ -16,7 +16,7 @@ This is an MVP built in a day, so I have been explicit throughout about what I l
 
 There are four moving parts.
 
-**The prospect chat** (`frontend-prospect`) is a single public page. It streams the assistant's replies token by token and, once the assistant has invited it, shows an upload box for the prospect's current policy. It deliberately contains no CRM vocabulary; a prospect should never see words like "pipeline" or "qualification score".
+**The prospect chat** (`frontend-prospect`) is a single public page. It is a centred conversation UI with replies streamed token by token, and a composer at the bottom that gains an "Attach policy" button once the assistant has asked for the prospect's current policy.
 
 **The broker dashboard** (`frontend-broker`) is the CRM. The home page is the pipeline board, with one tab per stage. Each lead has a detail page laid out in the order a broker works: the pipeline stepper with the next step, qualification, the full conversation, documents, and the analysis.
 

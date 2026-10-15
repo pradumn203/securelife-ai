@@ -80,7 +80,7 @@ cd frontend-prospect && npx tsc -b --noEmit
 - **Query keys** are stable arrays, e.g. `['leads']`, `['document', id]`, `['analysis', leadId]`.
 - **Polling for status**: use `refetchInterval` on react-query. Stop polling when the status reaches a terminal state.
 - **Streaming (chat)**: POST + SSE via `fetch` + `ReadableStream` (POST is not supported by native `EventSource`). The utility lives at `frontend-prospect/src/lib/sse.ts`.
-- **Styling**: Tailwind utility classes. UI primitives in `components/ui/*` follow the shadcn convention (`cva`, `cn`, forwardRef). Both apps keep their own copies — tiny files, easier than a shared package for the MVP.
+- **Styling**: Tailwind utility classes on the theme tokens in each app's `src/index.css` (`canvas`, `mist`, `ink`, `muted`, `lime`, `lavender`). Use the tokens, not raw `slate-*`/hex colours, so both apps stay on one palette. Lime and lavender are fills, never body text. The broker's primitives in `components/ui/*` follow the `cva` / `cn` / forwardRef pattern; the prospect chat has no primitive kit, just its chat components.
 
 ## Business rules worth knowing
 

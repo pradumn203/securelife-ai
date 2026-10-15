@@ -1,7 +1,5 @@
 import * as React from 'react'
-import { Send, Square } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { ArrowUp, Square } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface ChatInputProps {
@@ -11,85 +9,119 @@ export interface ChatInputProps {
   streaming?: boolean
   onStop?: () => void
   placeholder?: string
+  /** Rendered above the text box (attached files). */
+  attachments?: React.ReactNode
+  /** Rendered bottom-left inside the box (the attach button). */
+  tools?: React.ReactNode
+  /** A PDF dropped onto the composer. */
+  onDropFile?: (file: File) => void
 }
 
-const MAX_ROWS = 8
+const MAX_HEIGHT_PX = 200
 
+/**
+ * The composer, ChatGPT / Claude style: one rounded box pinned to the bottom
+ * of the page with the text area, tools on the left and a round send button.
+ * Enter sends, Shift+Enter adds a line.
+ */
 export function ChatInput({
   onSend,
   disabled,
   streaming,
   onStop,
-  placeholder = 'Type a message… (Shift+Enter for newline)',
+  placeholder = 'Message SecureLife',
+  attachments,
+  tools,
+  onDropFile,
 }: ChatInputProps) {
   const [value, setValue] = React.useState('')
+  const [dragOver, setDragOver] = React.useState(false)
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
 
-  // Auto-grow the textarea with the content, capped at MAX_ROWS lines.
-  React.useEffect(() => {
+  // Auto-grow with the content, up to a cap.
+  React.useLayoutEffect(() => {
     const el = textareaRef.current
     if (!el) return
     el.style.height = 'auto'
-    const lineHeight = 20 // ~text-sm leading-relaxed
-    const maxHeight = lineHeight * MAX_ROWS + 20 // +padding
-    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT_PX)}px`
   }, [value])
+
+  // Focus the box once the session is ready, and after each reply.
+  React.useEffect(() => {
+    if (!disabled && !streaming) textareaRef.current?.focus()
+  }, [disabled, streaming])
 
   const submit = () => {
     const trimmed = value.trim()
     if (!trimmed || disabled || streaming) return
     onSend(trimmed)
     setValue('')
-    // Reset height on next tick after state flushes.
-    requestAnimationFrame(() => {
-      if (textareaRef.current) textareaRef.current.style.height = 'auto'
-    })
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      submit()
-    }
   }
 
   const canSend = value.trim().length > 0 && !disabled && !streaming
 
   return (
-    <div className="flex items-end gap-2 border-t border-slate-200 bg-white p-3">
-      <Textarea
+    <div
+      className={cn(
+        'rounded-[28px] border bg-white p-2 shadow-[0_1px_2px_rgba(21,23,21,0.04),0_10px_30px_-12px_rgba(21,23,21,0.18)] transition-colors focus-within:border-ink/25',
+        dragOver ? 'border-ink/40 bg-brand-50' : 'border-line'
+      )}
+      onDragOver={(e) => {
+        if (!onDropFile) return
+        e.preventDefault()
+        setDragOver(true)
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        if (!onDropFile) return
+        e.preventDefault()
+        setDragOver(false)
+        const file = e.dataTransfer.files?.[0]
+        if (file) onDropFile(file)
+      }}
+    >
+      {attachments}
+      <textarea
         ref={textareaRef}
         rows={1}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+            e.preventDefault()
+            submit()
+          }
+        }}
         placeholder={placeholder}
         disabled={disabled}
-        className={cn('max-h-48 flex-1 leading-relaxed')}
+        aria-label="Message"
+        className="block max-h-[200px] w-full resize-none bg-transparent px-3 pb-1 pt-2.5 text-[15px] leading-6 text-ink outline-none placeholder:text-muted disabled:cursor-not-allowed"
       />
-      {streaming ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={onStop}
-          aria-label="Stop streaming"
-          title="Stop generating"
-        >
-          <Square className="h-4 w-4" />
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          size="icon"
-          onClick={submit}
-          disabled={!canSend}
-          aria-label="Send message"
-          title="Send (Enter)"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      )}
+      <div className="flex items-center justify-between gap-2 pl-1">
+        <div className="min-w-0">{tools}</div>
+        {streaming ? (
+          <button
+            type="button"
+            onClick={onStop}
+            aria-label="Stop the reply"
+            title="Stop"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-white hover:bg-ink-2"
+          >
+            <Square className="h-3.5 w-3.5 fill-current" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!canSend}
+            aria-label="Send message"
+            title="Send (Enter)"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-white transition-colors hover:bg-ink-2 disabled:bg-mist disabled:text-muted"
+          >
+            <ArrowUp className="h-[18px] w-[18px]" strokeWidth={2.5} />
+          </button>
+        )}
+      </div>
     </div>
   )
 }

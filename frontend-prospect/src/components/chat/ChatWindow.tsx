@@ -17,7 +17,7 @@ export interface ChatWindowProps {
   /** True when an assistant reply has been requested but no tokens have arrived yet. */
   awaitingFirstToken?: boolean
   className?: string
-  /** Fired when the user clicks Retry on an ERROR bubble. */
+  /** Fired when the user clicks Retry on an ERROR message. */
   onRetry?: () => void
   /** Disables the Retry button while a retry is already in flight. */
   retrying?: boolean
@@ -26,6 +26,7 @@ export interface ChatWindowProps {
 /** How close (px) the user must be to the bottom for auto-scroll to kick in. */
 const AUTOSCROLL_THRESHOLD = 100
 
+/** The scrolling conversation: one centred reading column, like ChatGPT / Claude. */
 export function ChatWindow({ messages, awaitingFirstToken, className, onRetry, retrying }: ChatWindowProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const stickToBottomRef = React.useRef(true)
@@ -38,8 +39,8 @@ export function ChatWindow({ messages, awaitingFirstToken, className, onRetry, r
     stickToBottomRef.current = distance < AUTOSCROLL_THRESHOLD
   }, [])
 
-  // Scroll to bottom when messages or streaming state change — but only if the
-  // user hasn't scrolled up to read older messages.
+  // Scroll to bottom when messages or streaming state change, unless the
+  // user has scrolled up to read older messages.
   React.useLayoutEffect(() => {
     if (!stickToBottomRef.current) return
     const el = scrollRef.current
@@ -48,41 +49,19 @@ export function ChatWindow({ messages, awaitingFirstToken, className, onRetry, r
   }, [messages, awaitingFirstToken])
 
   return (
-    <div
-      ref={scrollRef}
-      onScroll={handleScroll}
-      className={cn(
-        'flex-1 overflow-y-auto scroll-smooth px-4 py-4 bg-slate-50/60',
-        className
-      )}
-    >
-      <div className="mx-auto flex max-w-2xl flex-col gap-4">
-        {messages.length === 0 && !awaitingFirstToken && (
-          <p className="text-center text-sm text-slate-400">
-            Say hi to start the conversation.
-          </p>
-        )}
-
+    <div ref={scrollRef} onScroll={handleScroll} className={cn('flex-1 overflow-y-auto', className)}>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 pb-10 pt-8 sm:px-6">
         {messages.map((m) => (
           <MessageBubble
             key={m.id}
             role={m.role}
             content={m.content}
-            timestamp={m.timestamp}
             streaming={m.streaming}
             onRetry={m.role === 'ERROR' && onRetry ? onRetry : undefined}
             retrying={m.role === 'ERROR' ? retrying : undefined}
           />
         ))}
-
-        {awaitingFirstToken && (
-          <div className="flex flex-col items-start gap-1">
-            <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-              <span>SecureLife AI</span>
-            </div>
-            <TypingIndicator />
-          </div>
-        )}
+        {awaitingFirstToken ? <TypingIndicator /> : null}
       </div>
     </div>
   )

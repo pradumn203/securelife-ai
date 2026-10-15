@@ -3,20 +3,21 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-500',
-        secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 focus-visible:ring-slate-400',
-        outline: 'border border-slate-300 bg-white hover:bg-slate-50 focus-visible:ring-slate-400',
-        ghost: 'hover:bg-slate-100 text-slate-700 focus-visible:ring-slate-400',
+        default: 'bg-ink text-white hover:bg-ink-2 focus-visible:ring-ink',
+        accent: 'bg-lime text-ink hover:bg-lime-strong focus-visible:ring-lime-strong',
+        secondary: 'bg-mist text-ink hover:bg-line focus-visible:ring-muted',
+        outline: 'border border-line bg-white text-ink hover:bg-mist focus-visible:ring-muted',
+        ghost: 'text-ink-2 hover:bg-mist focus-visible:ring-muted',
         destructive: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500',
       },
       size: {
-        default: 'h-9 px-4 py-2',
-        sm: 'h-8 px-3 text-xs',
-        lg: 'h-10 px-6',
+        default: 'h-10 px-5',
+        sm: 'h-8 px-3.5 text-xs',
+        lg: 'h-11 px-6',
         icon: 'h-9 w-9',
       },
     },

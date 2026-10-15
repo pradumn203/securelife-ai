@@ -1,10 +1,10 @@
 import * as React from 'react'
-import { RotateCcw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { SquarePen } from 'lucide-react'
+import { BrandMark } from '@/components/layout/BrandMark'
 import { ChatWindow, type ChatWindowMessage } from '@/components/chat/ChatWindow'
 import { ChatInput } from '@/components/chat/ChatInput'
-import { DocumentShare } from '@/components/documents/DocumentShare'
+import { AttachButton, DocumentChips } from '@/components/documents/DocumentShare'
+import { useDocumentShare } from '@/components/documents/useDocumentShare'
 import { useStartSession, useLeadDetail, useInvalidateLeadDetail } from '@/api/hooks'
 import { openChatStream, type ChatStreamSession } from '@/lib/sse'
 
@@ -197,63 +197,64 @@ export function ChatPage() {
     )
   }, [leadDetail.data?.messages])
 
-  const hasAnyDocument = (leadDetail.data?.documents?.length ?? 0) > 0
-  const shouldShowUpload = assistantInvitedUpload || hasAnyDocument
+  const documents = leadDetail.data?.documents ?? []
+  const shouldShowUpload = assistantInvitedUpload || documents.length > 0
+  const share = useDocumentShare(leadId, documents)
 
   return (
     <>
-    <Card className="flex min-h-[70vh] flex-1 flex-col overflow-hidden border-slate-200/80 shadow-lg">
-      <div className="flex items-center justify-between border-b border-slate-200/80 bg-white px-5 py-3">
-        <div>
-          <p className="text-sm font-semibold text-slate-900">
-            Chat with SecureLife
-          </p>
-          <p className="text-xs text-slate-500">
-            We'll ask a few quick questions and connect you with a broker.
-          </p>
+      <header className="flex shrink-0 items-center justify-between px-4 py-3 sm:px-6">
+        <div className="flex items-center gap-2.5">
+          <BrandMark />
+          <div className="leading-tight">
+            <p className="text-[15px] font-bold tracking-tight text-ink">SecureLife</p>
+            <p className="text-xs font-medium text-muted">Insurance brokers · India</p>
+          </div>
         </div>
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
           onClick={startNewConversation}
-          className="text-slate-500 hover:text-slate-900"
           title="Start a fresh conversation"
+          className="inline-flex h-9 items-center gap-2 rounded-full px-3.5 text-sm font-semibold text-ink-2 hover:bg-mist"
         >
-          <RotateCcw className="h-3.5 w-3.5" />
-          Restart
-        </Button>
-      </div>
+          <SquarePen className="h-4 w-4" aria-hidden="true" />
+          New chat
+        </button>
+      </header>
 
-      {sessionError && (
-        <div className="border-b border-red-200 bg-red-50 px-5 py-2 text-xs text-red-700">
-          Could not start a session. Please refresh and try again.
+      {sessionError ? (
+        <div className="mx-auto mt-2 w-full max-w-3xl px-4 sm:px-6">
+          <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+            We couldn't start your chat. Please refresh the page and try again.
+          </p>
         </div>
-      )}
+      ) : null}
 
       <ChatWindow
+        className="min-h-0"
         messages={combinedMessages}
         awaitingFirstToken={awaitingFirstToken}
         onRetry={retryLastMessage}
         retrying={isStreaming && !!streamError}
       />
 
-      <div className="border-t border-slate-200/80 bg-white">
-        <ChatInput
-          onSend={sendMessage}
-          onStop={stopStreaming}
-          streaming={isStreaming}
-          disabled={!canSend && !isStreaming}
-        />
+      <div className="shrink-0 px-3 pb-3 sm:px-6">
+        <div className="mx-auto w-full max-w-3xl">
+          <ChatInput
+            onSend={sendMessage}
+            onStop={stopStreaming}
+            streaming={isStreaming}
+            disabled={!canSend && !isStreaming}
+            placeholder={leadId ? 'Message SecureLife' : 'Starting your chat…'}
+            attachments={shouldShowUpload ? <DocumentChips share={share} documents={documents} /> : null}
+            tools={shouldShowUpload ? <AttachButton share={share} highlight={documents.length === 0} /> : null}
+            onDropFile={shouldShowUpload ? (file) => void share.upload(file) : undefined}
+          />
+          <p className="mt-2 text-center text-[11px] font-medium text-muted">
+            Your details are shared only with a SecureLife broker. No marketing lists.
+          </p>
+        </div>
       </div>
-    </Card>
-
-    {shouldShowUpload && (
-      <DocumentShare
-        leadId={leadId}
-        documents={leadDetail.data?.documents ?? []}
-      />
-    )}
-  </>
+    </>
   )
 }

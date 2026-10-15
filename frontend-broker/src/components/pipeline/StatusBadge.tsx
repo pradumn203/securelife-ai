@@ -22,7 +22,7 @@ interface StatusMeta {
 const STATUS_META: Record<LeadStatus, StatusMeta> = {
   NEW: { variant: 'secondary', label: 'New lead', tab: 'New leads' },
   IN_PROGRESS: { variant: 'brand', label: 'In progress', tab: 'In progress' },
-  DOCS_PENDING: { variant: 'warning', label: 'Docs pending review', tab: 'Documents pending review' },
+  DOCS_PENDING: { variant: 'default', label: 'Docs pending review', tab: 'Documents pending review' },
   ANALYZED: { variant: 'success', label: 'Analysis complete', tab: 'Completed analyses' },
   CLOSED: { variant: 'outline', label: 'Closed', tab: 'Closed' },
 }

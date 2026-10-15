@@ -1,12 +1,35 @@
 @import "tailwindcss";
 
+/*
+ * SecureLife broker theme.
+ *
+ * A sage canvas with white and near-black cards, and two accents used as
+ * fills (never as body text): lime for "good / done", lavender for
+ * "in motion". `brand-*` is the green scale existing components use for
+ * links, focus rings and small highlights.
+ */
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --color-brand-50: oklch(0.97 0.02 265);
-  --color-brand-100: oklch(0.93 0.04 265);
-  --color-brand-500: oklch(0.55 0.15 265);
-  --color-brand-600: oklch(0.47 0.17 265);
-  --color-brand-700: oklch(0.39 0.17 265);
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --color-canvas: #e5eae3;
+  --color-mist: #f1f4ef;
+  --color-line: #dce2d9;
+  --color-ink: #151715;
+  --color-ink-2: #262a26;
+  --color-muted: #687067;
+
+  --color-lime: #b9f29f;
+  --color-lime-strong: #9fe47f;
+  --color-lime-ink: #1d4a10;
+  --color-lavender: #c7bcfb;
+  --color-lavender-ink: #34237f;
+
+  --color-brand-50: #f2f9ee;
+  --color-brand-100: #e0f4d5;
+  --color-brand-200: #c6ebb2;
+  --color-brand-500: #4f9e35;
+  --color-brand-600: #3d8326;
+  --color-brand-700: #2f661d;
 }
 
 :root {
@@ -18,8 +41,19 @@ body,
 #root {
   min-height: 100%;
   margin: 0;
-  background-color: oklch(0.98 0.005 265);
-  color: oklch(0.18 0.01 265);
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Hatched fill used on the stage cards, after the reference design. */
+.hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    currentColor 0,
+    currentColor 1px,
+    transparent 1px,
+    transparent 6px
+  );
 }

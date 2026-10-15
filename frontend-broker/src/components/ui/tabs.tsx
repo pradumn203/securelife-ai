@@ -20,7 +20,7 @@ export function Tabs<T extends string>({ value, onValueChange, options, classNam
       role="tablist"
       aria-orientation="horizontal"
       className={cn(
-        'inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1',
+        'inline-flex items-center gap-1 rounded-full bg-mist p-1',
         className
       )}
     >
@@ -34,10 +34,10 @@ export function Tabs<T extends string>({ value, onValueChange, options, classNam
             aria-selected={active}
             onClick={() => onValueChange(opt.value)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors',
               active
-                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-ink text-white'
+                : 'text-muted hover:text-ink'
             )}
           >
             <span>{opt.label}</span>
@@ -45,7 +45,7 @@ export function Tabs<T extends string>({ value, onValueChange, options, classNam
               <span
                 className={cn(
                   'rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none',
-                  active ? 'bg-brand-100 text-brand-700' : 'bg-slate-200 text-slate-600'
+                  active ? 'bg-lime text-ink' : 'bg-white text-muted'
                 )}
               >
                 {opt.count}

@@ -5,6 +5,16 @@ A small CRM for an insurance broker. Prospects chat with an assistant that asks 
 The design, the trade-offs and the failure handling are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); this file is just how to run it.
 
 
+## Hosted Application
+
+You can try the application live, hosted on **Render Free Tier**, using the links below:
+
+- **Prospect Chat:** [Open Prospect Chat](https://securelife-ai.onrender.com/chat/)
+- **Broker Dashboard:** [Open Broker Dashboard](https://securelife-ai.onrender.com/broker/)
+
+> **Note:** Since the application is hosted on Render's free tier, the first request may take 30–60 seconds or longer while the server wakes up from inactivity.
+
+
 ## Setup
 
 You need Python 3.12+, [uv](https://docs.astral.sh/uv/getting-started/installation/), Node.js 20+ and a free Groq API key from <https://console.groq.com/keys>.

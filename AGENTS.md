@@ -38,6 +38,8 @@ npm run dev
 
 Both Vite dev servers proxy `/api` to `127.0.0.1:8000`. `backend/.env.example` documents every setting.
 
+The root `Dockerfile` builds one container with no app-code changes: nginx (`docker/nginx.conf`) serves the broker build at `/broker/` and the chat build at `/chat/` (each built with that `--base`; the broker router takes its `basename` from `import.meta.env.BASE_URL`), redirects `/` to `/broker/`, and proxies `/api` to uvicorn on `127.0.0.1:8001`; `docker/start.sh` runs both, after resetting to the demo data (`seed.py --reset`, uploads cleared) on every start, so the container holds no lasting data. `backend/.env` is loaded at run time by `docker-compose.yml` and never copied into the image. Keep uvicorn at one worker: extraction runs as in-process background tasks and SQLite has one writer. Keep `proxy_buffering off` on `/api/`, or chat streaming arrives all at once.
+
 ## Checks to run after a change
 
 These are fast and spend no Groq tokens:

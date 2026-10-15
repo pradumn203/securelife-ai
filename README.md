@@ -40,6 +40,27 @@ npm run dev
 
 Both front ends proxy `/api` to the backend on port 8000.
 
+### Docker (one container)
+
+The image builds both front ends and runs everything behind one port, 8000: nginx serves the two apps and passes `/api` to the backend.
+
+```bash
+docker compose up --build
+```
+
+- Broker dashboard: http://localhost:8000/broker/
+- Prospect chat: http://localhost:8000/chat/
+- API docs: http://localhost:8000/docs
+
+If `backend/.env` exists, Compose passes it to the container at run time (Compose 2.24 or later); it is never copied into the image. Every start is a fresh demo: the container wipes the database and uploaded PDFs, then loads the seven demo leads. Anything you add is gone after a restart.
+
+Without Compose:
+
+```bash
+docker build -t securelife-ai .
+docker run -p 8000:8000 --env-file backend/.env securelife-ai
+```
+
 ## Trying it
 
 1. Open the prospect chat and say what you're looking for, e.g. "I need to renew my car insurance". Answer its questions. Once you've given a name and a phone number or email, you show up on the broker dashboard under **New leads**.
@@ -71,6 +92,8 @@ backend/            FastAPI app
 frontend-broker/    broker dashboard (React)
 frontend-prospect/  prospect chat (React)
 docs/               ARCHITECTURE.md and diagrams
+Dockerfile          one-container build (API + both front ends)
+docker/             nginx config and start script for the image
 ```
 
 ## Common problems

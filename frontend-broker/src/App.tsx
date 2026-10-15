@@ -22,7 +22,10 @@ const router = createBrowserRouter([
       { path: 'leads/:id', element: <LeadDetailPage /> },
     ],
   },
-])
+], {
+  // "/" in development; "/broker" in the Docker image (built with --base=/broker/).
+  basename: import.meta.env.BASE_URL.replace(/\/$/, '') || '/',
+})
 
 export default function App() {
   return (

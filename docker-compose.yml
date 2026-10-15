@@ -1,0 +1,18 @@
+# Local test of the single-container image.
+#
+#   docker compose up --build
+#
+#   Broker dashboard  http://localhost:8000/broker/
+#   Prospect chat     http://localhost:8000/chat/
+#   API docs          http://localhost:8000/docs
+
+services:
+  securelife:
+    build: .
+    image: securelife-ai:local
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: backend/.env
+        required: false
+    restart: unless-stopped

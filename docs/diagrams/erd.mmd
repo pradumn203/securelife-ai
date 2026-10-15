@@ -1,0 +1,60 @@
+erDiagram
+  LEAD ||--o{ CONVERSATION_MESSAGE : "chats"
+  LEAD ||--o{ QUALIFICATION : "is assessed by"
+  LEAD ||--o{ DOCUMENT : "shares"
+  DOCUMENT ||--o| DOCUMENT_EXTRACTION : "is read into"
+  LEAD ||--o{ ANALYSIS : "gets"
+
+  LEAD {
+    string id PK
+    string full_name
+    string email
+    string phone
+    string status "NEW / IN_PROGRESS / DOCS_PENDING / ANALYZED / CLOSED"
+    int qualification_score
+    string qualification_verdict
+    string close_reason "DISQUALIFIED / PURCHASED / OTHER"
+    json extracted_fields "facts captured in chat"
+  }
+
+  CONVERSATION_MESSAGE {
+    string id PK
+    string lead_id FK
+    string role "USER / ASSISTANT"
+    text content
+  }
+
+  QUALIFICATION {
+    string id PK
+    string lead_id FK
+    string verdict "QUALIFIED / NOT_QUALIFIED / NEEDS_MORE_INFO"
+    int score
+    json dimensions "scores + verified quotes"
+    json dealbreakers
+  }
+
+  DOCUMENT {
+    string id PK
+    string lead_id FK
+    string original_filename
+    string status "UPLOADED / PROCESSING / EXTRACTED / FAILED"
+  }
+
+  DOCUMENT_EXTRACTION {
+    string id PK
+    string document_id FK
+    string policy_type
+    string provider
+    decimal sum_insured
+    decimal premium_amount
+    date renewal_date
+    json evidence "page + excerpt per field"
+  }
+
+  ANALYSIS {
+    string id PK
+    string lead_id FK
+    json coverage_gaps
+    json risk_flags
+    text recommended_action
+  }

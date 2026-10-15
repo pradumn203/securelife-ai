@@ -1,0 +1,26 @@
+%%{init: {'theme':'neutral', 'flowchart': {'curve': 'basis', 'nodeSpacing': 35, 'rankSpacing': 45}}}%%
+flowchart TD
+  A(["Prospect opens the chat"]) --> B["Chat agent asks only the questions<br/>needed for their insurance type"]
+  B --> C{"Name and phone<br/>or email shared?"}
+  C -- "not yet" --> B
+  C -- "yes" --> D["NEW LEADS<br/>lead appears on the broker dashboard"]
+
+  D --> E["Broker: Run qualification agent"]
+  E --> F{"Verdict"}
+  F -- "Not qualified" --> X["Broker: Close as disqualified"]
+  F -- "Qualified / Needs more info" --> G["IN PROGRESS"]
+
+  G --> H["Policy PDF uploaded<br/>by prospect or broker"]
+  H --> I["DOCUMENTS PENDING REVIEW"]
+  I --> J["Broker: Run extractor agent<br/>policy fields + evidence"]
+  J --> K["Broker: Run analysis agent<br/>gaps, savings, risks, next action"]
+  K --> L["COMPLETED ANALYSES"]
+  L --> M["Broker closes the lead<br/>Purchased / Other + note"]
+
+  X --> Z(["CLOSED"])
+  M --> Z
+
+  classDef stage fill:#eef2ff,stroke:#6366f1,color:#1e1b4b,font-weight:bold
+  classDef action fill:#fef3c7,stroke:#d97706,color:#451a03
+  class D,G,I,L,Z stage
+  class E,J,K,X,M action

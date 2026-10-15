@@ -1,0 +1,35 @@
+%%{init: {'theme':'neutral', 'flowchart': {'curve': 'basis', 'nodeSpacing': 40, 'rankSpacing': 60}}}%%
+flowchart LR
+  Prospect(["Prospect"])
+  Broker(["Broker"])
+
+  ChatApp["Prospect chat app<br/>React · port 5174"]
+  Dashboard["Broker dashboard<br/>React · port 5173"]
+
+  subgraph Backend["FastAPI backend"]
+    API["REST + streaming API"]
+    Rules["Business rules<br/>question plans · pipeline stages<br/>quote checks · scoring"]
+    Agents["Five AI agents<br/>chat · chat extractor · qualification<br/>document extractor · analysis"]
+  end
+
+  Groq["Groq LLMs<br/>Qwen · gpt-oss-20b · gpt-oss-120b<br/>with automatic fallback"]
+  DB[("SQLite<br/>leads, chats, results")]
+  Files[("PDF storage")]
+
+  Prospect --> ChatApp
+  Broker --> Dashboard
+  ChatApp -->|"chat (streamed), PDF upload"| API
+  Dashboard -->|"pipeline, run agents, edit"| API
+  API --> Rules
+  API --> Agents
+  Agents -->|"prompts"| Groq
+  Rules --> DB
+  API --> DB
+  API --> Files
+
+  classDef person fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
+  classDef ext fill:#fef3c7,stroke:#d97706,color:#451a03
+  classDef store fill:#ecfdf5,stroke:#059669,color:#064e3b
+  class Prospect,Broker person
+  class Groq ext
+  class DB,Files store
